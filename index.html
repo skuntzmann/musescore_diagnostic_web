@@ -76,28 +76,37 @@
   </div>
 
   <script>
-    function diagnostiquer() {
-      const msg = document.getElementById('message').value.toLowerCase();
-      const os = document.getElementById('os').value;
-      const reponse = document.getElementById('reponse');
+  function diagnostiquer() {
+    const msg = document.getElementById('message').value.toLowerCase();
+    const os = document.getElementById('os').value;
+    const reponse = document.getElementById('reponse');
+    let solution = "";
 
-      let solution = "";
-
-      if (msg.includes("permission denied") && os === "macos") {
-        solution = "MuseScore n'a pas les droits d'écriture. Allez dans Préférences Système > Sécurité et confidentialité > Accès complet au disque, et ajoutez MuseScore.";
-      } else if (msg.includes(".temp")) {
-        solution = "L'erreur sur le fichier temporaire peut être résolue en enregistrant la partition ailleurs (comme sur le Bureau).";
-      } else if (msg.includes("undefined") || msg.includes("null")) {
-        solution = "Bug logiciel probable. Redémarrez MuseScore ou réinstallez la dernière version.";
-      } else if (msg.includes("file not found") || msg.includes("no such file")) {
-        solution = "Le fichier mentionné n'existe plus ou a été déplacé. Vérifiez son emplacement.";
-      } else {
-        solution = "Ce message n'est pas encore connu. Essayez de préciser ou contactez le support MuseScore.";
-      }
-
-      reponse.style.display = 'block';
-      reponse.innerText = solution;
+    if (msg.includes("permission denied") && os === "macos") {
+      solution = "MuseScore n'a pas les droits d'écriture. Allez dans Préférences Système > Sécurité et confidentialité > Accès complet au disque, et ajoutez MuseScore.";
+    } else if (msg.includes("open temp file") || msg.includes(".temp")) {
+      solution = "Erreur liée au fichier temporaire. Enregistrez ailleurs (par exemple sur le Bureau), ou redémarrez l'application.";
+    } else if (msg.includes("score is corrupted")) {
+      solution = "La partition est corrompue. Essayez de l'ouvrir dans une autre version de MuseScore, ou récupérez une sauvegarde (.mscz~).";
+    } else if (msg.includes("undefined") || msg.includes("null")) {
+      solution = "Bug logiciel probable. Redémarrez MuseScore ou réinstallez la dernière version.";
+    } else if (msg.includes("soundfont") && msg.includes("missing")) {
+      solution = "Le fichier SoundFont est manquant. Réinstallez-le via les préférences MuseScore > I/O ou le gestionnaire de ressources.";
+    } else if (msg.includes("cannot read file") || msg.includes("unreadable")) {
+      solution = "Le fichier est illisible ou endommagé. Vérifiez l’extension `.mscz`, ou essayez une autre copie.";
+    } else if (msg.includes("file already exists")) {
+      solution = "Le fichier existe déjà. Essayez d’enregistrer sous un autre nom ou dans un autre dossier.";
+    } else if (msg.includes("font") && msg.includes("missing")) {
+      solution = "Une police nécessaire est absente. Réinstallez MuseScore ou vérifiez votre système de polices.";
+    } else {
+      solution = "Ce message n'est pas encore reconnu. Essayez d’être plus précis ou contactez le support MuseScore.";
     }
-  </script>
+
+    reponse.style.display = 'block';
+    reponse.innerText = solution;
+  }
+</script>
+
 </body>
 </html>
+
