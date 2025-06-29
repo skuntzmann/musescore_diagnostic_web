@@ -9,10 +9,97 @@
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <script src="main.dart.js" defer></script>
   </head>
-  <body>
-    <script>
-      // Placeholder for Flutter web app loading
-    </script>
-    <noscript>You need to enable JavaScript to run this app.</noscript>
-  </body>
+			 <body>
+  <div class="container">
+    <h1>Diagnostic MuseScore</h1>
+
+    <label for="message">Message d'erreur ou description du problème :</label>
+    <textarea id="message" rows="4" placeholder="Copiez ou décrivez le message d'erreur..."></textarea>
+
+    <label for="os">Système d'exploitation :</label>
+    <select id="os">
+      <option value="">-- Choisissez --</option>
+      <option value="windows">Windows</option>
+      <option value="macos">macOS</option>
+      <option value="linux">Linux</option>
+    </select>
+
+    <button onclick="diagnostiquer()">Diagnostiquer</button>
+
+    <div class="response" id="reponse" style="display:none;"></div>
+  </div>
+
+  <script>
+    function diagnostiquer() {
+      const message = document.getElementById('message').value.toLowerCase();
+      const os = document.getElementById('os').value;
+      const reponse = document.getElementById('reponse');
+
+      let solution = "";
+
+      if (message.includes("permission denied") && os === "macos") {
+        solution = "Ce message indique que MuseScore n'a pas les droits d'écriture dans le dossier. Allez dans les Préférences Système > Sécurité et confidentialité > Accès complet au disque, et ajoutez MuseScore.";
+      } else if (message.includes(".temp")) {
+        solution = "L'erreur liée au fichier temporaire peut souvent être résolue en enregistrant la partition ailleurs (sur le Bureau, par exemple). Assurez-vous que le dossier cible est accessible.";
+      } else if (message.includes("undefined") || message.includes("null")) {
+        solution = "Un bug logiciel semble en cause. Essayez de redémarrer MuseScore ou de réinstaller la dernière version.";
+      } else {
+        solution = "Ce message n'est pas encore dans notre base. Essayez de préciser davantage le message ou contactez le support MuseScore.";
+      }
+
+      reponse.style.display = 'block';
+      reponse.innerText = solution;
+    }
+  </script>
+
+  <style>
+    body {
+      font-family: sans-serif;
+      margin: 0;
+      padding: 2rem;
+      background: #f4f4f4;
+    }
+    .container {
+      max-width: 600px;
+      margin: auto;
+      background: white;
+      padding: 2rem;
+      border-radius: 10px;
+      box-shadow: 0 0 20px rgba(0,0,0,0.1);
+    }
+    h1 {
+      text-align: center;
+      color: #333;
+    }
+    label {
+      display: block;
+      margin-top: 1rem;
+    }
+    input, select, textarea, button {
+      width: 100%;
+      padding: 0.8rem;
+      margin-top: 0.5rem;
+      border-radius: 5px;
+      border: 1px solid #ccc;
+      font-size: 1rem;
+    }
+    button {
+      background: #007bff;
+      color: white;
+      border: none;
+      margin-top: 1.5rem;
+      cursor: pointer;
+    }
+    button:hover {
+      background: #0056b3;
+    }
+    .response {
+      margin-top: 2rem;
+      padding: 1rem;
+      background: #e9ffe9;
+      border-left: 5px solid #28a745;
+    }
+  </style>
+</body>
+
 </html>
