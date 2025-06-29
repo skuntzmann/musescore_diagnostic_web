@@ -1,172 +1,18 @@
 <!DOCTYPE html>
-<html lang="fr">
-<head>
-  <meta charset="UTF-8" />
-  <title>Diagnostic MuseScore Web</title>
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <script src="https://cdn.jsdelivr.net/npm/tesseract.js@4"></script>
-  <style>
-    body {
-      font-family: sans-serif;
-      margin: 0;
-      padding: 2rem;
-      background: #f4f4f4;
-    }
-    .container {
-      max-width: 700px;
-      margin: auto;
-      background: white;
-      padding: 2rem;
-      border-radius: 10px;
-      box-shadow: 0 0 20px rgba(0,0,0,0.1);
-    }
-    h1 {
-      text-align: center;
-      color: #333;
-    }
-    label {
-      display: block;
-      margin-top: 1rem;
-      font-weight: bold;
-    }
-    input, select, textarea, button {
-      width: 100%;
-      padding: 0.8rem;
-      margin-top: 0.5rem;
-      border-radius: 5px;
-      border: 1px solid #ccc;
-      font-size: 1rem;
-    }
-    button {
-      background: #007bff;
-      color: white;
-      border: none;
-      margin-top: 1.5rem;
-      cursor: pointer;
-    }
-    button:hover {
-      background: #0056b3;
-    }
-    .response {
-      margin-top: 2rem;
-      padding: 1rem;
-      background: #e9ffe9;
-      border-left: 5px solid #28a745;
-    }
-  </style>
-</head>
-<body>
-  <div class="container">
-    <h1>Diagnostic MuseScore</h1>
-
-    <label for="launch">MuseScore se lance-t-il ?</label>
-    <select id="launch">
-      <option value="">-- Choisissez --</option>
-      <option value="no">❌ Non, il ne démarre pas</option>
-      <option value="yes">✅ Oui, mais il y a un bug</option>
-    </select>
-
-    <div id="extra-fields" style="display:none;">
-      <label for="message">Message d'erreur ou description du problème :</label>
-      <textarea id="message" rows="4" placeholder="Copiez, décrivez ou scannez le message d'erreur..."></textarea>
-
-      <input type="file" id="ocrImage" accept="image/*" />
-      <button onclick="lancerOCR()">📷 Lire le message depuis une image</button>
-
-      <label for="os">Système d'exploitation :</label>
-      <select id="os">
-        <option value="">-- Choisissez --</option>
-        <option value="windows">Windows</option>
-        <option value="macos">macOS</option>
-        <option value="linux">Linux</option>
-      </select>
-
-      <button onclick="diagnostiquer()">🩺 Diagnostiquer</button>
-    </div>
-
-    <div class="response" id="reponse" style="display:none;"></div>
-  </div>
-
-  <script>
-    const launchSelect = document.getElementById('launch');
-    const extraFields = document.getElementById('extra-fields');
-    const reponse = document.getElementById('reponse');
-
-    launchSelect.addEventListener('change', () => {
-      reponse.style.display = 'none';
-      if (launchSelect.value === "yes" || launchSelect.value === "no") {
-        extraFields.style.display = 'block';
-      } else {
-        extraFields.style.display = 'none';
-      }
-    });
-
-    function diagnostiquer() {
-      const launch = document.getElementById('launch').value;
-      const message = document.getElementById('message').value.toLowerCase();
-      const os = document.getElementById('os').value;
-      let solution = "";
-
-      if (!launch) {
-        alert("Veuillez indiquer si MuseScore se lance ou non.");
-        return;
-      }
-
-      if (launch === "no") {
-        // Problèmes au démarrage
-        if (message.includes("quit unexpectedly") || os === "macos") {
-          solution = "Sur macOS, supprimez le dossier ~/Library/Application Support/MuseScore, puis relancez.";
-        } else if (message.includes("segmentation fault") || os === "linux") {
-          solution = "Essayez de lancer MuseScore en mode sans échec avec `-F` dans un terminal.";
-        } else if (message.includes(".dll") || os === "windows") {
-          solution = "Réinstallez les Visual C++ Redistributables pour Windows.";
-        } else if (message.includes("nothing happens") || message.trim() === "") {
-          solution = "Essayez de supprimer les préférences MuseScore (AppData/MuseScoreX) ou réinstallez le logiciel.";
-        } else {
-          solution = "Problème au démarrage non reconnu. Essayez de réinstaller MuseScore ou de supprimer ses préférences.";
-        }
-
-      } else if (launch === "yes") {
-        // Problèmes après lancement
-        if (message.includes("permission denied") && os === "macos") {
-          solution = "MuseScore n’a pas les droits d’écriture. Allez dans Sécurité > Accès complet au disque et ajoutez MuseScore.";
-        } else if (message.includes("file already exists")) {
-          solution = "Le fichier existe déjà. Essayez d’enregistrer sous un autre nom.";
-        } else if (message.includes(".temp")) {
-          solution = "L’erreur .temp est liée à l’accès disque. Enregistrez sur un autre dossier (ex : Bureau).";
-        } else if (message.includes("cannot read file")) {
-          solution = "Fichier illisible. Vérifiez qu’il s’agit bien d’un fichier .mscz non corrompu.";
-        } else if (message.includes("corrupted")) {
-          solution = "Partition corrompue. Essayez d’ouvrir une sauvegarde (.mscz~) ou utilisez une autre version de MuseScore.";
-        } else if (message.includes("soundfont") && message.includes("missing")) {
-          solution = "SoundFont manquant. Allez dans Préférences > I/O pour réassigner le fichier.";
-        } else if (message.includes("undefined") || message.includes("null")) {
-          solution = "Bug logiciel. Essayez de redémarrer MuseScore ou réinstaller la dernière version.";
-        } else if (message.includes("network")) {
-          solution = "Problème de connexion. Vérifiez votre pare-feu ou votre proxy.";
-        } else {
-          solution = "Erreur non reconnue. Essayez d’être plus précis ou contactez le support MuseScore.";
-        }
-      }
-
-      reponse.style.display = 'block';
-      reponse.innerText = solution;
-    }
-
-    function lancerOCR() {
-      const fileInput = document.getElementById('ocrImage');
-      const file = fileInput.files[0];
-      if (!file) return alert("Choisissez une image d'abord.");
-
-      Tesseract.recognize(file, 'eng+fra')
-        .then(({ data: { text } }) => {
-          document.getElementById('message').value = text;
-        })
-        .catch(err => {
-          console.error(err);
-          alert("Erreur OCR. Essayez avec une autre image.");
-        });
-    }
-  </script>
-</body>
+<html>
+  <head>
+    <meta charset="UTF-8" />
+    <title>Diagnostic MuseScore Web</title>
+    <link rel="manifest" href="manifest.json" />
+    <meta name="description" content="Diagnostic MuseScore Web" />
+    <meta name="theme-color" content="#2196f3" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <script src="main.dart.js" defer></script>
+  </head>
+  <body>
+    <script>
+      // Placeholder for Flutter web app loading
+    </script>
+    <noscript>You need to enable JavaScript to run this app.</noscript>
+  </body>
 </html>

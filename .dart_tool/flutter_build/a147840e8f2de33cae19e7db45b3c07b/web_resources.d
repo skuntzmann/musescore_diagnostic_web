@@ -1,1 +1,0 @@
-:  /home/sk5ntz/Téléchargements/musescore_diagnostic_web/web/index.html
