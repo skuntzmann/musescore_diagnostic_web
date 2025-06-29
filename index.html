@@ -1,0 +1,103 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8" />
+  <title>Diagnostic MuseScore Web</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta name="description" content="Outil de diagnostic pour MuseScore" />
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      background: #f4f4f4;
+      margin: 0;
+      padding: 2rem;
+    }
+    .container {
+      max-width: 600px;
+      background: white;
+      margin: auto;
+      padding: 2rem;
+      border-radius: 10px;
+      box-shadow: 0 0 20px rgba(0,0,0,0.1);
+    }
+    h1 {
+      text-align: center;
+      color: #333;
+    }
+    label {
+      margin-top: 1rem;
+      display: block;
+    }
+    textarea, select, button {
+      width: 100%;
+      padding: 0.8rem;
+      margin-top: 0.5rem;
+      border: 1px solid #ccc;
+      border-radius: 5px;
+      font-size: 1rem;
+    }
+    button {
+      background: #007bff;
+      color: white;
+      border: none;
+      margin-top: 1.5rem;
+      cursor: pointer;
+    }
+    button:hover {
+      background: #0056b3;
+    }
+    .response {
+      margin-top: 2rem;
+      padding: 1rem;
+      background: #e9ffe9;
+      border-left: 5px solid #28a745;
+      display: none;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>Diagnostic MuseScore</h1>
+
+    <label for="message">Message d'erreur ou description du problème :</label>
+    <textarea id="message" rows="4" placeholder="Copiez ou décrivez le message d'erreur..."></textarea>
+
+    <label for="os">Système d'exploitation :</label>
+    <select id="os">
+      <option value="">-- Choisissez --</option>
+      <option value="windows">Windows</option>
+      <option value="macos">macOS</option>
+      <option value="linux">Linux</option>
+    </select>
+
+    <button onclick="diagnostiquer()">Diagnostiquer</button>
+
+    <div class="response" id="reponse"></div>
+  </div>
+
+  <script>
+    function diagnostiquer() {
+      const msg = document.getElementById('message').value.toLowerCase();
+      const os = document.getElementById('os').value;
+      const reponse = document.getElementById('reponse');
+
+      let solution = "";
+
+      if (msg.includes("permission denied") && os === "macos") {
+        solution = "MuseScore n'a pas les droits d'écriture. Allez dans Préférences Système > Sécurité et confidentialité > Accès complet au disque, et ajoutez MuseScore.";
+      } else if (msg.includes(".temp")) {
+        solution = "L'erreur sur le fichier temporaire peut être résolue en enregistrant la partition ailleurs (comme sur le Bureau).";
+      } else if (msg.includes("undefined") || msg.includes("null")) {
+        solution = "Bug logiciel probable. Redémarrez MuseScore ou réinstallez la dernière version.";
+      } else if (msg.includes("file not found") || msg.includes("no such file")) {
+        solution = "Le fichier mentionné n'existe plus ou a été déplacé. Vérifiez son emplacement.";
+      } else {
+        solution = "Ce message n'est pas encore connu. Essayez de préciser ou contactez le support MuseScore.";
+      }
+
+      reponse.style.display = 'block';
+      reponse.innerText = solution;
+    }
+  </script>
+</body>
+</html>
