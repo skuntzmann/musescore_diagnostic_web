@@ -4,18 +4,18 @@
   <meta charset="UTF-8" />
   <title>Diagnostic MuseScore Web</title>
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <meta name="description" content="Outil de diagnostic pour MuseScore" />
+  <script src="https://cdn.jsdelivr.net/npm/tesseract.js@4"></script>
   <style>
     body {
-      font-family: Arial, sans-serif;
-      background: #f4f4f4;
+      font-family: sans-serif;
       margin: 0;
       padding: 2rem;
+      background: #f4f4f4;
     }
     .container {
       max-width: 600px;
-      background: white;
       margin: auto;
+      background: white;
       padding: 2rem;
       border-radius: 10px;
       box-shadow: 0 0 20px rgba(0,0,0,0.1);
@@ -25,15 +25,15 @@
       color: #333;
     }
     label {
-      margin-top: 1rem;
       display: block;
+      margin-top: 1rem;
     }
-    textarea, select, button {
+    input, select, textarea, button {
       width: 100%;
       padding: 0.8rem;
       margin-top: 0.5rem;
-      border: 1px solid #ccc;
       border-radius: 5px;
+      border: 1px solid #ccc;
       font-size: 1rem;
     }
     button {
@@ -51,7 +51,6 @@
       padding: 1rem;
       background: #e9ffe9;
       border-left: 5px solid #28a745;
-      display: none;
     }
   </style>
 </head>
@@ -60,7 +59,10 @@
     <h1>Diagnostic MuseScore</h1>
 
     <label for="message">Message d'erreur ou description du problème :</label>
-    <textarea id="message" rows="4" placeholder="Copiez ou décrivez le message d'erreur..."></textarea>
+    <textarea id="message" rows="4" placeholder="Copiez, décrivez ou scannez le message d'erreur..."></textarea>
+
+    <input type="file" id="ocrImage" accept="image/*" />
+    <button onclick="lancerOCR()">📷 Lire le message depuis une image</button>
 
     <label for="os">Système d'exploitation :</label>
     <select id="os">
@@ -70,43 +72,56 @@
       <option value="linux">Linux</option>
     </select>
 
-    <button onclick="diagnostiquer()">Diagnostiquer</button>
+    <button onclick="diagnostiquer()">🩺 Diagnostiquer</button>
 
-    <div class="response" id="reponse"></div>
+    <div class="response" id="reponse" style="display:none;"></div>
   </div>
 
   <script>
-  function diagnostiquer() {
-    const msg = document.getElementById('message').value.toLowerCase();
-    const os = document.getElementById('os').value;
-    const reponse = document.getElementById('reponse');
-    let solution = "";
+    function diagnostiquer() {
+      const msg = document.getElementById('message').value.toLowerCase();
+      const os = document.getElementById('os').value;
+      const reponse = document.getElementById('reponse');
+      let solution = "";
 
-    if (msg.includes("permission denied") && os === "macos") {
-      solution = "MuseScore n'a pas les droits d'écriture. Allez dans Préférences Système > Sécurité et confidentialité > Accès complet au disque, et ajoutez MuseScore.";
-    } else if (msg.includes("open temp file") || msg.includes(".temp")) {
-      solution = "Erreur liée au fichier temporaire. Enregistrez ailleurs (par exemple sur le Bureau), ou redémarrez l'application.";
-    } else if (msg.includes("score is corrupted")) {
-      solution = "La partition est corrompue. Essayez de l'ouvrir dans une autre version de MuseScore, ou récupérez une sauvegarde (.mscz~).";
-    } else if (msg.includes("undefined") || msg.includes("null")) {
-      solution = "Bug logiciel probable. Redémarrez MuseScore ou réinstallez la dernière version.";
-    } else if (msg.includes("soundfont") && msg.includes("missing")) {
-      solution = "Le fichier SoundFont est manquant. Réinstallez-le via les préférences MuseScore > I/O ou le gestionnaire de ressources.";
-    } else if (msg.includes("cannot read file") || msg.includes("unreadable")) {
-      solution = "Le fichier est illisible ou endommagé. Vérifiez l’extension `.mscz`, ou essayez une autre copie.";
-    } else if (msg.includes("file already exists")) {
-      solution = "Le fichier existe déjà. Essayez d’enregistrer sous un autre nom ou dans un autre dossier.";
-    } else if (msg.includes("font") && msg.includes("missing")) {
-      solution = "Une police nécessaire est absente. Réinstallez MuseScore ou vérifiez votre système de polices.";
-    } else {
-      solution = "Ce message n'est pas encore reconnu. Essayez d’être plus précis ou contactez le support MuseScore.";
+      if (msg.includes("permission denied") && os === "macos") {
+        solution = "MuseScore n'a pas les droits d'écriture. Allez dans Préférences Système > Sécurité et confidentialité > Accès complet au disque, et ajoutez MuseScore.";
+      } else if (msg.includes("open temp file") || msg.includes(".temp")) {
+        solution = "Erreur liée au fichier temporaire. Enregistrez ailleurs (par exemple sur le Bureau), ou redémarrez l'application.";
+      } else if (msg.includes("score is corrupted")) {
+        solution = "La partition est corrompue. Essayez de l'ouvrir dans une autre version de MuseScore, ou récupérez une sauvegarde (.mscz~).";
+      } else if (msg.includes("undefined") || msg.includes("null")) {
+        solution = "Bug logiciel probable. Redémarrez MuseScore ou réinstallez la dernière version.";
+      } else if (msg.includes("soundfont") && msg.includes("missing")) {
+        solution = "Le fichier SoundFont est manquant. Réinstallez-le via les préférences MuseScore > I/O ou le gestionnaire de ressources.";
+      } else if (msg.includes("cannot read file") || msg.includes("unreadable")) {
+        solution = "Le fichier est illisible ou endommagé. Vérifiez l’extension `.mscz`, ou essayez une autre copie.";
+      } else if (msg.includes("file already exists")) {
+        solution = "Le fichier existe déjà. Essayez d’enregistrer sous un autre nom ou dans un autre dossier.";
+      } else if (msg.includes("font") && msg.includes("missing")) {
+        solution = "Une police nécessaire est absente. Réinstallez MuseScore ou vérifiez votre système de polices.";
+      } else {
+        solution = "Ce message n'est pas encore reconnu. Essayez d’être plus précis ou contactez le support MuseScore.";
+      }
+
+      reponse.style.display = 'block';
+      reponse.innerText = solution;
     }
 
-    reponse.style.display = 'block';
-    reponse.innerText = solution;
-  }
-</script>
+    function lancerOCR() {
+      const fileInput = document.getElementById('ocrImage');
+      const file = fileInput.files[0];
+      if (!file) return alert("Choisissez une image d'abord.");
 
+      Tesseract.recognize(file, 'eng+fra')
+        .then(({ data: { text } }) => {
+          document.getElementById('message').value = text;
+        })
+        .catch(err => {
+          console.error(err);
+          alert("Erreur lors de la reconnaissance de texte.");
+        });
+    }
+  </script>
 </body>
 </html>
-
