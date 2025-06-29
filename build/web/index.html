@@ -1,18 +1,138 @@
 <!DOCTYPE html>
-<html>
-  <head>
-    <meta charset="UTF-8" />
-    <title>Diagnostic MuseScore Web</title>
-    <link rel="manifest" href="manifest.json" />
-    <meta name="description" content="Diagnostic MuseScore Web" />
-    <meta name="theme-color" content="#2196f3" />
-    <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <script src="main.dart.js" defer></script>
-  </head>
-  <body>
-    <script>
-      // Placeholder for Flutter web app loading
-    </script>
-    <noscript>You need to enable JavaScript to run this app.</noscript>
-  </body>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8" />
+  <title>Diagnostic MuseScore Web</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <style>
+    body { font-family: sans-serif; padding: 2rem; background: #f0f0f0; }
+    .container { background: white; padding: 2rem; max-width: 700px; margin: auto; border-radius: 8px; box-shadow: 0 0 10px rgba(0,0,0,0.1); }
+    h1 { text-align: center; }
+    textarea, select, input, button {
+      width: 100%; padding: 0.7rem; margin-top: 0.7rem; font-size: 1rem;
+      border-radius: 5px; border: 1px solid #ccc;
+    }
+    button { background-color: #007bff; color: white; border: none; margin-top: 1rem; cursor: pointer; }
+    button:hover { background-color: #0056b3; }
+    .response, .history, .help { margin-top: 2rem; }
+    .response { background: #e9ffe9; border-left: 5px solid #28a745; padding: 1rem; }
+    .history-entry { background: #f9f9f9; border: 1px solid #ccc; padding: 0.8rem; margin-bottom: 0.5rem; border-radius: 5px; }
+    #video { max-width: 100%; display: none; margin-top: 1rem; }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>Diagnostic MuseScore</h1>
+
+    <label>Le logiciel MuseScore se lance-t-il ?</label>
+    <select id="startup">
+      <option value="">-- Choisissez --</option>
+      <option value="non">Non, il ne se lance pas</option>
+      <option value="oui">Oui, il se lance mais il y a un problème</option>
+    </select>
+
+    <label for="os">Système d'exploitation :</label>
+    <select id="os">
+      <option value="">-- Choisissez --</option>
+      <option value="windows">Windows</option>
+      <option value="macos">macOS</option>
+      <option value="linux">Linux</option>
+    </select>
+
+    <label for="message">Message d'erreur ou description du problème :</label>
+    <textarea id="message" rows="4" placeholder="Décrivez ou saisissez le message d'erreur..."></textarea>
+
+    <button onclick="diagnostiquer()">Diagnostiquer</button>
+    <button onclick="startOCR()">📷 Lire depuis la caméra (OCR)</button>
+
+    <video id="video" autoplay></video>
+
+    <div class="response" id="reponse" style="display:none;"></div>
+
+    <div class="history" id="historique">
+      <h3>Historique des diagnostics</h3>
+      <div id="history-list"></div>
+    </div>
+
+    <div class="help">
+      <h3>📦 Fichier de diagnostic MuseScore</h3>
+      <p>Vous pouvez extraire des fichiers de log détaillés depuis MuseScore :</p>
+      <ol>
+        <li>Menu <strong>Aide</strong> → <strong>Diagnostic</strong> → <strong>Enregistrer les fichiers de diagnostic</strong></li>
+        <li>Un fichier <code>.zip</code> est généré</li>
+        <li>Vous pouvez l’analyser ou l’envoyer au support</li>
+      </ol>
+    </div>
+  </div>
+
+  <script>
+    let baseErreurs = [];
+
+    // Charger la base JSON depuis errors.json
+    fetch("errors.json")
+      .then(res => res.json())
+      .then(data => baseErreurs = data);
+
+    function diagnostiquer() {
+      const os = document.getElementById("os").value;
+      const startup = document.getElementById("startup").value;
+      const message = document.getElementById("message").value.toLowerCase();
+      const reponse = document.getElementById("reponse");
+      const history = document.getElementById("history-list");
+
+      let result = "Message non reconnu. Essayez de le reformuler ou d'envoyer les logs via MuseScore.";
+
+      for (const err of baseErreurs) {
+        const osMatch = err.os === "all" || err.os === os;
+        const typeMatch = (startup === "non" && err.type === "launch") || (startup === "oui" && err.type === "runtime");
+        const msgMatch = err.match.some(fragment => message.includes(fragment));
+        if (osMatch && typeMatch && msgMatch) {
+          result = err.solution;
+          break;
+        }
+      }
+
+      // Afficher
+      reponse.style.display = 'block';
+      reponse.innerText = result;
+
+      // Sauvegarder dans l’historique
+      const entry = { date: new Date().toLocaleString(), os, startup, message, result };
+      const historyData = JSON.parse(localStorage.getItem("history") || "[]");
+      historyData.unshift(entry);
+      localStorage.setItem("history", JSON.stringify(historyData));
+      afficherHistorique();
+    }
+
+    function afficherHistorique() {
+      const history = JSON.parse(localStorage.getItem("history") || "[]");
+      const historyDiv = document.getElementById("history-list");
+      historyDiv.innerHTML = "";
+      history.forEach(entry => {
+        const div = document.createElement("div");
+        div.className = "history-entry";
+        div.innerHTML = `<strong>${entry.date}</strong><br/>
+        <em>${entry.startup}, ${entry.os}</em><br/>
+        <strong>Message :</strong> ${entry.message}<br/>
+        <strong>Diagnostic :</strong> ${entry.result}`;
+        historyDiv.appendChild(div);
+      });
+    }
+
+    afficherHistorique();
+
+    // OCR via caméra
+    async function startOCR() {
+      const video = document.getElementById("video");
+      video.style.display = 'block';
+      try {
+        const stream = await navigator.mediaDevices.getUserMedia({ video: true });
+        video.srcObject = stream;
+        alert("L'OCR sera intégré prochainement ici (version Flutter mobile déjà OK).");
+      } catch (e) {
+        alert("Impossible d'accéder à la caméra.");
+      }
+    }
+  </script>
+</body>
 </html>
