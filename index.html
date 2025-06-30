@@ -2,10 +2,10 @@
 <html lang="fr">
 <head>
   <meta charset="UTF-8" />
-  <title>Diagnostic MuseScore</title>
+  <title>Diagnostic MuseScore Web</title>
+  <meta name="description" content="Diagnostic MuseScore Web" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <meta name="theme-color" content="#2196f3" />
-  <link rel="manifest" href="manifest.json" />
+  <script src="https://cdn.jsdelivr.net/npm/tesseract.js@5.0.1/dist/tesseract.min.js"></script>
   <style>
     body {
       font-family: sans-serif;
@@ -14,7 +14,7 @@
       background: #f4f4f4;
     }
     .container {
-      max-width: 700px;
+      max-width: 600px;
       margin: auto;
       background: white;
       padding: 2rem;
@@ -29,7 +29,7 @@
       display: block;
       margin-top: 1rem;
     }
-    textarea, select, input, button {
+    input, select, textarea, button {
       width: 100%;
       padding: 0.8rem;
       margin-top: 0.5rem;
@@ -53,24 +53,22 @@
       background: #e9ffe9;
       border-left: 5px solid #28a745;
     }
-    .historique {
-      margin-top: 2rem;
-      background: #fff;
-      padding: 1rem;
+    .ocr-preview {
+      margin-top: 1rem;
+      max-width: 100%;
       border: 1px solid #ccc;
-    }
-    .historique h3 {
-      margin-top: 0;
-    }
-    .historique-entry {
-      border-bottom: 1px dashed #ccc;
-      padding: 0.5rem 0;
     }
   </style>
 </head>
 <body>
   <div class="container">
     <h1>Diagnostic MuseScore</h1>
+
+    <label for="image">OU prenez une photo du message d’erreur :</label>
+    <input type="file" id="image" accept="image/*" onchange="extraireTexte()" />
+
+    <img id="preview" class="ocr-preview" src="" style="display:none;" />
+    <p id="loading" style="display:none;">Analyse de l’image en cours...</p>
 
     <label for="message">Message d'erreur ou description du problème :</label>
     <textarea id="message" rows="4" placeholder="Copiez ou décrivez le message d'erreur..."></textarea>
@@ -86,70 +84,65 @@
     <button onclick="diagnostiquer()">Diagnostiquer</button>
 
     <div class="response" id="reponse" style="display:none;"></div>
-
-    <div class="historique" id="historique" style="display:none;">
-      <h3>Historique des diagnostics</h3>
-      <div id="listeHistorique"></div>
-    </div>
   </div>
 
   <script>
-    let erreurs = [];
+    let erreursConnues = [];
 
-    // Charger le fichier JSON
-    fetch("assets/errors.json")
-      .then(res => res.json())
+    fetch('assets/errors.json')
+      .then(response => response.json())
       .then(data => {
-        erreurs = data;
-        console.log("✅ Base d'erreurs chargée :", erreurs.length);
-        afficherHistorique();
+        erreursConnues = data;
       });
 
     function diagnostiquer() {
       const message = document.getElementById('message').value.toLowerCase();
       const os = document.getElementById('os').value;
       const reponse = document.getElementById('reponse');
-      const historique = document.getElementById('historique');
 
-      let solution = "❌ Aucune correspondance trouvée. Veuillez affiner votre message ou consulter le support MuseScore.";
-      let match = erreurs.find(e => {
-        return e.match_keywords.some(m => message.includes(m)) &&
-               (os === "" || e.labels.map(l => l.toLowerCase()).includes(os));
-      });
+      let resultat = erreursConnues.find(e =>
+        e.match_keywords.some(m => message.includes(m)) &&
+        (e.labels.includes(os) || e.labels.includes("all"))
+      );
 
-      if (match) {
-        solution = `✅ Problème identifié : ${match.title}\n\n🔗 Voir : ${match.url}\n\n💡 Solution proposée :\n${match.solution || "(Aucune solution fournie encore)"}`;
+      if (resultat) {
+        reponse.innerHTML = `
+          <h3>${resultat.title}</h3>
+          <p>${resultat.solution}</p>
+          <a href="${resultat.url}" target="_blank">Voir sur GitHub</a>
+        `;
+      } else {
+        reponse.innerHTML = "Aucune solution trouvée. Essayez de reformuler ou de consulter le support.";
       }
 
       reponse.style.display = 'block';
-      reponse.innerText = solution;
-
-      // Ajouter à l'historique local
-      const historiqueData = JSON.parse(localStorage.getItem("historique") || "[]");
-      historiqueData.unshift({
-        message, os, resultat: solution, date: new Date().toLocaleString()
-      });
-      localStorage.setItem("historique", JSON.stringify(historiqueData));
-      afficherHistorique();
     }
 
-    function afficherHistorique() {
-      const data = JSON.parse(localStorage.getItem("historique") || "[]");
-      const liste = document.getElementById("listeHistorique");
-      const conteneur = document.getElementById("historique");
-      if (data.length === 0) {
-        conteneur.style.display = "none";
-        return;
+    function extraireTexte() {
+      const input = document.getElementById('image');
+      const preview = document.getElementById('preview');
+      const loading = document.getElementById('loading');
+      const message = document.getElementById('message');
+
+      if (input.files && input.files[0]) {
+        const reader = new FileReader();
+        reader.onload = function(e) {
+          preview.src = e.target.result;
+          preview.style.display = 'block';
+          loading.style.display = 'block';
+
+          Tesseract.recognize(e.target.result, 'eng')
+            .then(({ data: { text } }) => {
+              message.value = text;
+              loading.style.display = 'none';
+            })
+            .catch(err => {
+              message.value = "Erreur OCR : " + err.message;
+              loading.style.display = 'none';
+            });
+        };
+        reader.readAsDataURL(input.files[0]);
       }
-      conteneur.style.display = "block";
-      liste.innerHTML = data.slice(0, 5).map(entry => `
-        <div class="historique-entry">
-          <strong>${entry.date}</strong><br/>
-          <em>Message:</em> ${entry.message}<br/>
-          <em>OS:</em> ${entry.os || "non précisé"}<br/>
-          <em>Résultat:</em><br/>${entry.resultat.replace(/\n/g, "<br/>")}
-        </div>
-      `).join("");
     }
   </script>
 </body>
