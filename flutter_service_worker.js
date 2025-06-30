@@ -18,6 +18,7 @@ const RESOURCES = {
 "flutter.js": "a85fcf6324d3c4d3ae3be1ae4931e9c5",
 "index.html": "16058c27a1db7c969d87290918c7629c",
 "/": "16058c27a1db7c969d87290918c7629c",
+"assets/errors.json": "f2739d13417288ec30baffade927dd5d",
 "assets/AssetManifest.bin.json": "a1fee2517bf598633e2f67fcf3e26c94",
 "assets/AssetManifest.bin": "0b0a3415aad49b6e9bf965ff578614f9",
 "assets/NOTICES": "33590b8e3890cbdeac1f0090978284d4",

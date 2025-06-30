@@ -1,0 +1,26 @@
+[
+  {
+    "id": 1,
+    "title": "Permission denied lors de l'ouverture d'un fichier temporaire",
+    "match_keywords": ["permission denied", ".temp"],
+    "labels": ["macos", "filesystem"],
+    "solution": "Ce message indique que MuseScore n'a pas les droits d'écriture dans le dossier. Allez dans les Préférences Système > Sécurité et confidentialité > Accès complet au disque, et ajoutez MuseScore.",
+    "url": "https://github.com/musescore/MuseScore/issues/1923"
+  },
+  {
+    "id": 2,
+    "title": "Crash à l'ouverture de MuseScore",
+    "match_keywords": ["crash", "fail to launch", "cannot start", "unexpected error"],
+    "labels": ["windows", "startup"],
+    "solution": "Essayez de réinitialiser les préférences de MuseScore en lançant `mscore -F` en ligne de commande.",
+    "url": "https://github.com/musescore/MuseScore/issues/5100"
+  },
+  {
+    "id": 3,
+    "title": "Impossible d'enregistrer la partition",
+    "match_keywords": ["save failed", "cannot write", "access denied"],
+    "labels": ["windows", "save"],
+    "solution": "Assurez-vous que vous avez les droits sur le dossier. Essayez d’enregistrer sur le bureau ou dans un dossier personnel.",
+    "url": "https://github.com/musescore/MuseScore/issues/3210"
+  }
+]
