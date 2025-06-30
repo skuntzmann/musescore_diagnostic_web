@@ -1,16 +1,17 @@
 <!DOCTYPE html>
 <html lang="fr">
 <head>
-  <meta charset="UTF-8">
-  <title>Diagnostic MuseScore Web</title>
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <script src="https://cdn.jsdelivr.net/npm/tesseract.js@2.1.5/dist/tesseract.min.js"></script>
+  <meta charset="UTF-8" />
+  <title>Diagnostic MuseScore</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta name="theme-color" content="#2196f3" />
+  <link rel="manifest" href="manifest.json" />
   <style>
     body {
       font-family: sans-serif;
       margin: 0;
       padding: 2rem;
-      background: #f9f9f9;
+      background: #f4f4f4;
     }
     .container {
       max-width: 700px;
@@ -20,7 +21,7 @@
       border-radius: 10px;
       box-shadow: 0 0 20px rgba(0,0,0,0.1);
     }
-    h1, h3 {
+    h1 {
       text-align: center;
       color: #333;
     }
@@ -28,7 +29,7 @@
       display: block;
       margin-top: 1rem;
     }
-    textarea, select, button, input[type="file"] {
+    textarea, select, input, button {
       width: 100%;
       padding: 0.8rem;
       margin-top: 0.5rem;
@@ -40,22 +41,30 @@
       background: #007bff;
       color: white;
       border: none;
-      margin-top: 1rem;
+      margin-top: 1.5rem;
       cursor: pointer;
     }
     button:hover {
       background: #0056b3;
     }
-    .response, .help, .history {
+    .response {
       margin-top: 2rem;
       padding: 1rem;
-      background: #eef9ff;
-      border-left: 5px solid #2196f3;
+      background: #e9ffe9;
+      border-left: 5px solid #28a745;
     }
-    .history-entry {
-      border-top: 1px solid #ccc;
-      margin-top: 0.5rem;
-      padding-top: 0.5rem;
+    .historique {
+      margin-top: 2rem;
+      background: #fff;
+      padding: 1rem;
+      border: 1px solid #ccc;
+    }
+    .historique h3 {
+      margin-top: 0;
+    }
+    .historique-entry {
+      border-bottom: 1px dashed #ccc;
+      padding: 0.5rem 0;
     }
   </style>
 </head>
@@ -63,14 +72,10 @@
   <div class="container">
     <h1>Diagnostic MuseScore</h1>
 
-    <label for="lancement">Le logiciel MuseScore :</label>
-    <select id="lancement">
-      <option value="">-- Choisissez --</option>
-      <option value="demarrage">ne se lance pas</option>
-      <option value="ouvert">est ouvert, mais j’ai un bug ou une erreur</option>
-    </select>
+    <label for="message">Message d'erreur ou description du problème :</label>
+    <textarea id="message" rows="4" placeholder="Copiez ou décrivez le message d'erreur..."></textarea>
 
-    <label for="os">Système d’exploitation :</label>
+    <label for="os">Système d'exploitation :</label>
     <select id="os">
       <option value="">-- Choisissez --</option>
       <option value="windows">Windows</option>
@@ -78,92 +83,74 @@
       <option value="linux">Linux</option>
     </select>
 
-    <label for="message">Message d’erreur ou description du problème :</label>
-    <textarea id="message" rows="3" placeholder="Décrivez ou collez le message d'erreur..."></textarea>
-
-    <label for="image">📸 Ou envoyez une photo du message (OCR) :</label>
-    <input type="file" id="image" accept="image/*">
-
     <button onclick="diagnostiquer()">Diagnostiquer</button>
 
     <div class="response" id="reponse" style="display:none;"></div>
 
-    <div class="help">
-      <h3>📦 Fichier de diagnostic MuseScore</h3>
-      <p>Pour diagnostiquer un bug logiciel ou un plantage :</p>
-      <ol>
-        <li>Ouvrez MuseScore</li>
-        <li>Allez dans <strong>Aide → Diagnostic → Enregistrer les fichiers de diagnostic</strong></li>
-        <li>Un fichier <code>.zip</code> sera généré, contenant logs, préférences et plus</li>
-        <li>Vous pouvez l’analyser ou l’envoyer à un support</li>
-      </ol>
-    </div>
-
-    <div class="history" id="historique">
-      <h3>🕘 Historique des diagnostics</h3>
-      <div id="history-list"></div>
+    <div class="historique" id="historique" style="display:none;">
+      <h3>Historique des diagnostics</h3>
+      <div id="listeHistorique"></div>
     </div>
   </div>
 
   <script>
+    let erreurs = [];
+
+    // Charger le fichier JSON
+    fetch("assets/errors.json")
+      .then(res => res.json())
+      .then(data => {
+        erreurs = data;
+        console.log("✅ Base d'erreurs chargée :", erreurs.length);
+        afficherHistorique();
+      });
+
     function diagnostiquer() {
-      const lancement = document.getElementById('lancement').value;
-      const os = document.getElementById('os').value;
       const message = document.getElementById('message').value.toLowerCase();
+      const os = document.getElementById('os').value;
       const reponse = document.getElementById('reponse');
-      let solution = "";
+      const historique = document.getElementById('historique');
 
-      if (!lancement || !os || !message.trim()) {
-        alert("Merci de remplir tous les champs nécessaires.");
-        return;
-      }
+      let solution = "❌ Aucune correspondance trouvée. Veuillez affiner votre message ou consulter le support MuseScore.";
+      let match = erreurs.find(e => {
+        return e.match_keywords.some(m => message.includes(m)) &&
+               (os === "" || e.labels.map(l => l.toLowerCase()).includes(os));
+      });
 
-      if (lancement === "demarrage") {
-        solution = "MuseScore ne démarre pas : essayez de lancer le logiciel en ligne de commande avec l'option `-d` (mode debug) pour identifier l'erreur. Si cela échoue, réinstallez MuseScore et videz vos préférences.";
-      } else if (message.includes("permission denied") && os === "macos") {
-        solution = "Autorisez MuseScore dans Préférences Système > Sécurité et confidentialité > Accès complet au disque.";
-      } else if (message.includes(".temp")) {
-        solution = "L’erreur liée à un fichier temporaire est souvent due à un problème de permission. Essayez d’enregistrer la partition ailleurs, comme sur le Bureau.";
-      } else if (message.includes("undefined") || message.includes("null")) {
-        solution = "Bug interne de MuseScore. Redémarrez le logiciel ou installez la dernière version.";
-      } else {
-        solution = "Message non reconnu. Essayez d’exporter les fichiers de diagnostic via Aide > Diagnostic.";
+      if (match) {
+        solution = `✅ Problème identifié : ${match.title}\n\n🔗 Voir : ${match.url}\n\n💡 Solution proposée :\n${match.solution || "(Aucune solution fournie encore)"}`;
       }
 
       reponse.style.display = 'block';
       reponse.innerText = solution;
-      sauvegarderHistorique(lancement, os, message, solution);
+
+      // Ajouter à l'historique local
+      const historiqueData = JSON.parse(localStorage.getItem("historique") || "[]");
+      historiqueData.unshift({
+        message, os, resultat: solution, date: new Date().toLocaleString()
+      });
+      localStorage.setItem("historique", JSON.stringify(historiqueData));
       afficherHistorique();
     }
 
-    function sauvegarderHistorique(lancement, os, message, solution) {
-      let historique = JSON.parse(localStorage.getItem("historique") || "[]");
-      historique.unshift({ date: new Date().toLocaleString(), lancement, os, message, solution });
-      localStorage.setItem("historique", JSON.stringify(historique.slice(0, 10))); // max 10 entrées
-    }
-
     function afficherHistorique() {
-      const historique = JSON.parse(localStorage.getItem("historique") || "[]");
-      const container = document.getElementById("history-list");
-      container.innerHTML = historique.map(e =>
-        `<div class="history-entry">
-          <strong>${e.date}</strong><br>
-          OS: ${e.os} – MuseScore: ${e.lancement}<br>
-          Message: <em>${e.message}</em><br>
-          ➤ Réponse : ${e.solution}
-        </div>`).join("");
+      const data = JSON.parse(localStorage.getItem("historique") || "[]");
+      const liste = document.getElementById("listeHistorique");
+      const conteneur = document.getElementById("historique");
+      if (data.length === 0) {
+        conteneur.style.display = "none";
+        return;
+      }
+      conteneur.style.display = "block";
+      liste.innerHTML = data.slice(0, 5).map(entry => `
+        <div class="historique-entry">
+          <strong>${entry.date}</strong><br/>
+          <em>Message:</em> ${entry.message}<br/>
+          <em>OS:</em> ${entry.os || "non précisé"}<br/>
+          <em>Résultat:</em><br/>${entry.resultat.replace(/\n/g, "<br/>")}
+        </div>
+      `).join("");
     }
-
-    // OCR
-    document.getElementById('image').addEventListener('change', function () {
-      const file = this.files[0];
-      if (!file) return;
-      Tesseract.recognize(file, 'eng+fra').then(({ data: { text } }) => {
-        document.getElementById('message').value = text.trim();
-      });
-    });
-
-    afficherHistorique();
   </script>
 </body>
 </html>
